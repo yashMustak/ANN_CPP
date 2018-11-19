@@ -1,6 +1,6 @@
 #include<iostream>
-#include"..\math\matrix.hpp"
-#include"..\math\matrixMul.hpp"
+#include"../math/matrix.hpp"
+#include"../math/matrixMul.hpp"
 using namespace std;
 using namespace mustak;
 int main(){

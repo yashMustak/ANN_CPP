@@ -1,12 +1,13 @@
 #ifndef mustak_math_transpose
 #define mustak_math_transpose
 
-#include"..\preReq.hpp"
+#include"../preReq.hpp"
 using namespace std;
 
 namespace mustak{
 	namespace math{
-		matrix<double> transpose(matrix<double> mat){
+		matrix<double> transpose(matrix<double> &mat){
+			cout<<"in transpose"<<endl;
 			int out = mat.rowno;
 			int in = mat.colno;
 			matrix<double> trans(out, in);

@@ -2,49 +2,47 @@
 #define mustak_neural_network
 
 #include"preReq.hpp"
-#include"layers\neuralLayer.hpp"
+#include"layers/neuralLayer.hpp"
 
-#include"math\matrixMul.hpp"
-#include"math\hadamardPro.hpp"
-#include"math\transpose.hpp"
-#include"math\cropMat.hpp"
+#include"math/matrixMul.hpp"
+#include"math/hadamardPro.hpp"
+#include"math/transpose.hpp"
+#include"math/cropMat.hpp"
 
-#include"loss\lossQuad.hpp"
-#include"activation\activation.hpp"
+#include"loss/lossQuad.hpp"
+#include"activation/activation.hpp"
 #include<cstdlib>
 using namespace std;
 
 namespace mustak{
+	debug::debuger bug;
 	class network{
 		private:
-			struct layerNode{
-				layers::layer* neuralLayer;
-				layerNode* nextLayer;
-				layerNode* preLayer;
-				matrix weightMat;
-			};
-			layerNode* inputLayer;
-			layerNode* outputLayer;
+			vector<layers::layer*> networkLayer;
+			vector<math::matrix<double> > layerWeight;
+			layers::layer* inputLayer;
+			layers::layer* outputLayer;
 			double (*activationDerivative)(double);
-			double (*lossFunction)(matrix, matrix);
-			matrix (*lossFunctionDer)(matrix, matrix);
+			double (*lossFunction)(math::matrix<double>, math::matrix<double>);
+			math::matrix<double> (*lossFunctionDer)(math::matrix<double>, math::matrix<double>);
 		
 		public://for testing purpose only these methods are public	
-			matrix feed(matrix);
-			matrix backPropagate(matrix expectedOutput);
+			math::matrix<double> feed(math::matrix<double>);
+			// math::matrix<double> backPropagate(math::matrix<double> expectedOutput);
+			void backPropagate(math::matrix<double> expectedOutput);
 			
 		public:
 			network(double (&activationDer)(double) = act_der::sigmoid, 
-					double (&lossFunc)(matrix, matrix) = loss::lossQuad,
-					matrix (&lossFunctionDer)(matrix, matrix) = loss_der::lossQuad);
+					double (&lossFunc)(math::matrix<double>, math::matrix<double>) = loss::lossQuad,
+					math::matrix<double> (&lossFunctionDer)(math::matrix<double>, math::matrix<double>) = loss_der::lossQuad);
 
 			void addLayer(layers::layer &layerObj);
 	};
 }
 
 mustak::network::network(double (&activationDer)(double),
-						 double (&lossFunc)(matrix, matrix),
-						 matrix (&lossFuncDer)(matrix, matrix)){
+						 double (&lossFunc)(math::matrix<double>, math::matrix<double>),
+						 math::matrix<double> (&lossFuncDer)(math::matrix<double>, math::matrix<double>)){
 	inputLayer = NULL;
 	outputLayer = NULL;
 	activationDerivative = &activationDer;
@@ -53,33 +51,32 @@ mustak::network::network(double (&activationDer)(double),
 }
 
 void mustak::network::addLayer(layers::layer &layerObj){
-	layerNode* temp = new layerNode;
-	temp->neuralLayer = &layerObj;
-	temp->nextLayer = NULL;
 	int preLayerNeurons = 0;
-	int thisLayerNeurons = temp->neuralLayer->noOfNeurons;
-	if(inputLayer == NULL){
-		temp->preLayer = NULL;
-		inputLayer = temp;
-		outputLayer = temp;
+	int thisLayerNeurons = layerObj.noOfNeurons;
+	if(networkLayer.empty()){
+		networkLayer.push_back(&layerObj);
+		inputLayer = networkLayer.back();
+		outputLayer = networkLayer.back();
 	}
 	else{
-		preLayerNeurons = outputLayer->neuralLayer->noOfNeurons;
-		temp->preLayer = outputLayer;
-		outputLayer->nextLayer = temp;
-		outputLayer = temp;
+		preLayerNeurons = outputLayer->noOfNeurons;
+		networkLayer.push_back(&layerObj);
+		outputLayer = networkLayer.back();
+		math::matrix<double> weightMat(thisLayerNeurons, preLayerNeurons+1);
+		cout<<thisLayerNeurons<<"\t"<<preLayerNeurons<<endl; //test
 		for(int i=0; i<preLayerNeurons+1; i++){
-			vector<double> tempo;
 			for(int j = 0; j<thisLayerNeurons; j++){
-				tempo.push_back((double) rand()/(RAND_MAX/2)-1);
+				cout<<"."; //test 
+				weightMat.set((double) rand()/(RAND_MAX/2)-1, i, j);
 			}
-			temp->weightMat.push_back(tempo);
 		}
+		layerWeight.push_back(weightMat);
 		
 		// This code segment is only for testing purpose
+		bug.setMsg("well this is weight matrix");
 		for(int i=0; i<preLayerNeurons+1; i++){
 			for(int j = 0; j<thisLayerNeurons; j++){
-				cout<<temp->weightMat[i][j];
+				cout<<weightMat.get(i, j);
 			}
 			cout<<endl;
 		}
@@ -88,22 +85,24 @@ void mustak::network::addLayer(layers::layer &layerObj){
 	}
 }
 
-matrix mustak::network::feed(matrix input){
+
+mustak::math::matrix<double> mustak::network::feed(math::matrix<double> input){
 	try{
-		if(input[0].size() == inputLayer->neuralLayer->noOfNeurons){
-			layerNode*  feeder = inputLayer;
-			feeder->neuralLayer->setLayerInput(input);
-			feeder->neuralLayer->setLayerOutput();
-			input = feeder->neuralLayer->getLayerOutput();
-			feeder = feeder->nextLayer;
-			matrix layerInput;
-			while(feeder != NULL){
-				input[0].push_back(1);
-				layerInput = math::matrixMulti(input, feeder->weightMat);
-				feeder->neuralLayer->setLayerInput(layerInput);
-				feeder->neuralLayer->setLayerOutput();
-				input = feeder->neuralLayer->getLayerOutput();
-				feeder = feeder->nextLayer;
+		if(input.colno == inputLayer->noOfNeurons){
+			int noOfLayers = networkLayer.size();
+			int layerIterator = 0;
+			networkLayer[layerIterator]->setLayerInput(input);
+			networkLayer[layerIterator]->setLayerOutput();
+			input = networkLayer[layerIterator]->getLayerOutput();
+			layerIterator++;
+			math::matrix<double> layerInput;
+			while(layerIterator != noOfLayers){
+				input.incSize(1, 0, 1);
+				layerInput = math::matrixMulti(input, layerWeight[layerIterator-1]);
+				networkLayer[layerIterator]->setLayerInput(layerInput);
+				networkLayer[layerIterator]->setLayerOutput();
+				input = networkLayer[layerIterator]->getLayerOutput();
+				layerIterator++;
 			}
 			return input;
 		}
@@ -117,102 +116,138 @@ matrix mustak::network::feed(matrix input){
 	}	
 }
 
-matrix mustak::network::backPropagate(matrix expectedOutput){
-	vector<matrix> errors;
-	matrix layerError;
-	layerNode *layerPointer = outputLayer;
-	matrix activationDer;
-	vector<double> tempActDer;
-	cout<<"in backpropagation"<<endl;
-	for(int i=0; i<layerPointer->neuralLayer->layerOutVector[0].size(); i++){
-		tempActDer.push_back(activationDerivative(layerPointer->neuralLayer->layerVector[0][i]));
+// mustak::math::matrix<double> mustak::network::backPropagate(math::matrix<double> expectedOutput){
+void mustak::network::backPropagate(math::matrix<double> expectedOutput){
+	vector<math::matrix<double> > errors;
+	math::matrix<double> layerError;
+//	layerNode *layerPointer = outputLayer;
+	int layerIterator = networkLayer.size()-1;
+	math::matrix<double> activationDer(networkLayer[layerIterator]->noOfNeurons, 1);
+	cout<<"in backpropagation"<<endl; //test
+
+	for(int i=0; i<networkLayer[layerIterator]->noOfNeurons; i++){
+		cout<<"in actDer loop"<<endl; // test
+		activationDer.set(activationDerivative(networkLayer[layerIterator]->layerVector.get(0, i)), 0, i);
 	}
-	activationDer.push_back(tempActDer);
-	layerError = math::hadamard(lossFunctionDer(layerPointer->neuralLayer->layerOutVector, expectedOutput), activationDer);
+	
+	layerError = math::hadamard(lossFunctionDer(networkLayer[layerIterator]->layerOutVector, expectedOutput), activationDer);
+	cout<<"done hadamard"<<endl; //test
 	errors.push_back(layerError);
+
 	// Test segment
 	cout<<"output layer error: ";
-	for(int i=0; i<layerError[0].size(); i++){
-		cout<<layerError[0][i];
+	for(int i=0; i<layerError.colno; i++){
+		cout<<layerError.get(0, i);
 	}
 	cout<<endl;
 	//end segment
-	while(layerPointer->preLayer != NULL){
-		cout<<"in while"<<endl;
-		layerPointer = layerPointer->preLayer;
-		activationDer.clear();
-		tempActDer.clear();
-		for(int i=0; i<layerPointer->neuralLayer->layerOutVector[0].size(); i++){
-			tempActDer.push_back(activationDerivative(layerPointer->neuralLayer->layerVector[0][i]));
+
+	while(--layerIterator){
+		cout<<"in while"<<endl; //test
+		activationDer.reset();
+		activationDer.mat_init(networkLayer[layerIterator]->noOfNeurons, 1);
+		for(int i=0; i<networkLayer[layerIterator]->noOfNeurons; i++){
+			cout<<"in actDer"<<endl;
+			activationDer.set(activationDerivative(networkLayer[layerIterator]->layerVector.get(0, i)), 0, i);
 		}
-		activationDer.push_back(tempActDer);
+
+		/*
 		// test segment
 		cout<<endl<<"weightMat"<<endl;
-		for(int i = 0; i<layerPointer->nextLayer->weightMat.size(); i++){
-			for(int j = 0; j<layerPointer->nextLayer->weightMat[0].size(); j++){
-				cout<<layerPointer->nextLayer->weightMat[i][j];
+		for(int i = 0; i<layerWeight[layerIterator].rowno; i++){
+			for(int j = 0; j<layerWeight[layerIterator].colno; j++){
+				cout<<layerWeight[layerIterator].get(i, j);
 			}
 			cout<<endl;
 		}
 		cout<<endl<<"errors.back()"<<endl;
-		matrix test = errors.back();
-		for(int i = 0; i<test.size(); i++){
-			for(int j = 0; j<test[0].size(); j++){
-				cout<<test[i][j];
+		math::matrix<double> test = errors.back();
+		for(int i = 0; i<test.rowno; i++){
+			for(int j = 0; j<test.colno; j++){
+				cout<<test.get(i, j);
 			}
 			cout<<endl;
 		}
 		
 		cout<<endl<<"multiplication pro 1"<<endl;
-		matrix multiPro1 = math::cropMatrix(
-								layerPointer->nextLayer->weightMat,
-								1, layerPointer->nextLayer->weightMat[0].size()-1, 1, layerPointer->nextLayer->weightMat.size()-2);
-		for(int i = 0; i<multiPro1.size(); i++){
-			for(int j = 0; j<multiPro1[0].size(); j++){
-				cout<<multiPro1[i][j];
+		cout<<layerWeight[layerIterator].colno<<"\t"<<layerWeight[layerIterator].rowno-1<<endl; 
+		math::matrix<double> multiPro1 = math::cropMatrix(
+								layerWeight[layerIterator],
+								0, layerWeight[layerIterator].colno, 0, layerWeight[layerIterator].rowno-1);
+		for(int i = 0; i<multiPro1.rowno; i++){
+			for(int j = 0; j<multiPro1.colno; j++){
+				cout<<multiPro1.get(i, j);
 			}
 			cout<<endl;
 		}
 		
 		cout<<endl<<"multiplication pro 2"<<endl;
-		matrix multiPro2 = math::transpose(errors.back());
-		for(int i = 0; i<multiPro2.size(); i++){
-			for(int j = 0; j<multiPro2[0].size(); j++){
-				cout<<multiPro2[i][j];
+		math::matrix<double> multiPro2 = math::transpose(errors.back());
+		for(int i = 0; i<multiPro2.rowno; i++){
+			for(int j = 0; j<multiPro2.colno; j++){
+				cout<<multiPro2.get(i, j);
 			}
 			cout<<endl;
 		}
 		
 		cout<<endl<<"hadamard pro 1"<<endl;
-		matrix hadaPro1 = math::matrixMulti(
+		math::matrix<double> hadaPro1 = math::matrixMulti(
 							math::cropMatrix(
-								layerPointer->nextLayer->weightMat,
-								1, layerPointer->nextLayer->weightMat[0].size()-1, 1, layerPointer->nextLayer->weightMat.size()-2),
+								layerWeight[layerIterator],
+								0, layerWeight[layerIterator].colno, 0, layerWeight[layerIterator].rowno-1),
 							math::transpose(errors.back()));
-		for(int i = 0; i<hadaPro1.size(); i++){
-			for(int j = 0; j<hadaPro1[0].size(); j++){
-				cout<<hadaPro1[i][j];
+		for(int i = 0; i<hadaPro1.rowno; i++){
+			for(int j = 0; j<hadaPro1.colno; j++){
+				cout<<hadaPro1.get(i, j);
 			}
 			cout<<endl;
 		}
 		
 		cout<<endl<<"hadamard Pro 2"<<endl;
-		for(int i = 0; i<activationDer.size(); i++){
-			for(int j = 0; j<activationDer[0].size(); j++){
-				cout<<activationDer[i][j];
+		math::matrix<double> h2 = math::transpose(activationDer);
+		for(int i = 0; i<h2.rowno; i++){
+			for(int j = 0; j<h2.colno; j++){
+				cout<<h2.get(i, j);
 			}
 			cout<<endl;
 		}
 		// end segment
+		*/
+		
 		
 		layerError = math::hadamard(
 						math::matrixMulti(
 							math::cropMatrix(
-								layerPointer->nextLayer->weightMat,
-								1, layerPointer->nextLayer->weightMat[0].size()-1, 1, layerPointer->nextLayer->weightMat.size()-2),
+								layerWeight[layerIterator],
+								0, layerWeight[layerIterator].colno, 0, layerWeight[layerIterator].rowno-1),
 							math::transpose(errors.back())),
 						math::transpose(activationDer));
-		errors.push_back(layerError);
+		cout<<"completed layer error task"<<endl;
+		errors.push_back(math::transpose(layerError));
+	}
+	cout<<"bye backprop"<<endl; // test segment
+	
+	
+	// rate of change of cost wrt weights
+	vector<math::matrix<double>> weight_gradient_vector;
+	layerIterator = networkLayer.size();
+	
+	cout<<"before while"<<endl;
+
+	while(--layerIterator){
+		// math::matrix<double> weightGrad;
+		//test segment
+		cout<<"inside while of weight"<<endl;
+		networkLayer[layerIterator-1]->layerOutVector.print();
+		cout<<endl<<"multi matrix 2"<<endl;
+		cout<<layerIterator<<endl;
+		//end segment
+
+		weight_gradient_vector.push_back(
+								math::matrixMulti(
+									math::transpose(
+										networkLayer[layerIterator-1]->layerOutVector),
+										errors[layerIterator]));
 	}
 }
 

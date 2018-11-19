@@ -2,8 +2,8 @@
 #define math_matrix_mul
 
 #include<iostream>
-#include"..\math\matrix.hpp"
-#include"..\exceptions\exception.hpp"
+#include"../math/matrix.hpp"
+#include"../exceptions/exception.hpp"
 #include<vector>
 using namespace std;
 //better to apply dynamic programming

@@ -3,8 +3,8 @@
 
 #include<iostream>
 #include<vector>
-#include"exceptions\exception.hpp"
-#include"debug\debug.hpp"
-#include"math\matrix.hpp"
+#include"exceptions/exception.hpp"
+#include"debug/debug.hpp"
+#include"math/matrix.hpp"
 
 #endif

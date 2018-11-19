@@ -3,8 +3,8 @@
 
 #include<iostream>
 #include<vector>
-#include"..\exceptions\exception.hpp"
-#include"..\debug\debug.hpp"
+#include"../exceptions/exception.hpp"
+#include"../debug/debug.hpp"
 using namespace std;
 
 namespace mustak{
@@ -92,6 +92,7 @@ namespace mustak{
 							matric.push_back(temp);
 						}
 					}
+					is_init = true;
 				}
 				
 				void reset(){
@@ -100,6 +101,31 @@ namespace mustak{
 						colno = 0;
 						rowno = 0;
 						is_init = false;
+					}
+				}
+
+				void init(){
+					if(!is_init) is_init = true;
+				}
+
+				void print(){
+					try{
+						if(is_init){
+							for(int i = 0; i<rowno; i++){
+								for(int j = 0; j<colno; j++){
+									cout<<matric[i][j]<<" ";
+								}
+								cout<<endl;
+							}
+							cout<<endl;
+						}
+						else{
+							exceptions::matrix_not_initialized e;
+							throw e;
+						}
+					}
+					catch(exception& e){
+						cout<<e.what();
 					}
 				}
 		};

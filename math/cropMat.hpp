@@ -1,7 +1,7 @@
 #ifndef mustak_math_matrixCrop
 #define mustak_math_matrixCrop
 
-#include"..\preReq.hpp"
+#include"../preReq.hpp"
 using namespace std;
 namespace mustak{
 	namespace math{

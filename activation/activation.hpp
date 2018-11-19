@@ -1,7 +1,7 @@
 #ifndef mustak_activations
 #define mustak_activations
 
-#include"..\preReq.hpp"
+#include"../preReq.hpp"
 #include<cmath>
 using namespace std;
 

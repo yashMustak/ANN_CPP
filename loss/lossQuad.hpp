@@ -1,7 +1,7 @@
 #ifndef mustak_quadreatic_loss_function
 #define mustak_quadreatic_loss_function
 
-#include"..\preReq.hpp"
+#include"../preReq.hpp"
 #include<cmath>
 using namespace std;
 

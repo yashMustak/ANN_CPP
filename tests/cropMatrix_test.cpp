@@ -1,5 +1,5 @@
-#include"..\math\cropMat.hpp"
-#include"..\math\matrix.hpp"
+#include"../math/cropMat.hpp"
+#include"../math/matrix.hpp"
 using namespace std;
 using namespace mustak;
 

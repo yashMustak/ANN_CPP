@@ -1,11 +1,11 @@
 #ifndef Neural_network_layer
 #define Neural_network_layer
 
-#include"..\preReq.hpp"
+#include"../preReq.hpp"
 #include<cstdlib>
 
 //Including the optimizer functions
-#include"..\activation\activation.hpp"
+#include"../activation/activation.hpp"
 using namespace std;
 
 namespace mustak{

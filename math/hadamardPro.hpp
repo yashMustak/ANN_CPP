@@ -1,7 +1,7 @@
 #ifndef mustak_math_hadamard
 #define mustak_math_hadamard
 
-#include"..\preReq.hpp"
+#include"../preReq.hpp"
 using namespace std;
 
 namespace mustak{
@@ -20,6 +20,7 @@ namespace mustak{
 							hProduct.set(mat1.get(i, j)*mat2.get(i, j), i, j);
 						}
 					}
+					cout<<"returning from hadamard";
 					return hProduct;
 				}
 				else{

@@ -1,6 +1,6 @@
 #include<iostream>
-#include"..\math\hadamardPro.hpp"
-#include"..\preReq.hpp"
+#include"../math/hadamardPro.hpp"
+#include"../preReq.hpp"
 using namespace std;
 using namespace mustak;
 
