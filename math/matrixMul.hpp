@@ -14,6 +14,7 @@ namespace mustak{
 			try{
 				if(matrix1.colno == matrix2.rowno){
 					matrix<T> resultMat(matrix2.colno, matrix1.rowno);
+
 					int outer = matrix1.rowno;
 					int middle = matrix2.colno;
 					int inner = matrix2.rowno;

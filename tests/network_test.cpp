@@ -18,16 +18,16 @@ int main(){
 	math::matrix<double> input(2, 1);
 	input.set(3.0, 0, 0);
 	input.set(1.0, 0, 1);
-	math::matrix<double> output = mynn.feed(input);
-	for(int i = 0; i<output.colno; i++){
-		cout<<output.get(0, i)<<", ";
-	}
+	// math::matrix<double> output = mynn.feed(input);
+	// for(int i = 0; i<output.colno; i++){
+	// 	cout<<output.get(0, i)<<", ";
+	// }
 	
 	math::matrix<double> out(1, 2);
 	out.set(1.0, 0, 0);
 	out.set(0.0, 0, 1);
-	mynn.backPropagate(out);
-	
+	// mynn.backPropagate(out);
+	mynn.fit(input, out);
 	cout<<"finish !!!"<<endl;
 	return 0;
 }

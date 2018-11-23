@@ -11,6 +11,7 @@
 
 #include"loss/lossQuad.hpp"
 #include"activation/activation.hpp"
+#include"optimizers/gradient_descent.hpp"
 #include<cstdlib>
 using namespace std;
 
@@ -22,10 +23,14 @@ namespace mustak{
 			vector<math::matrix<double> > layerWeight;
 			layers::layer* inputLayer;
 			layers::layer* outputLayer;
+			int max_iterations;
+			double learning_rate;
+			double threshold;
 			double (*activationDerivative)(double);
 			double (*lossFunction)(math::matrix<double>, math::matrix<double>);
 			math::matrix<double> (*lossFunctionDer)(math::matrix<double>, math::matrix<double>);
-		
+			bool (*optimizer) (vector<layers::layer*>&, vector<math::matrix<double> >&, vector<math::matrix<double> >&, double, double);
+
 		public://for testing purpose only these methods are public	
 			math::matrix<double> feed(math::matrix<double>);
 			// math::matrix<double> backPropagate(math::matrix<double> expectedOutput);
@@ -34,20 +39,34 @@ namespace mustak{
 		public:
 			network(double (&activationDer)(double) = act_der::sigmoid, 
 					double (&lossFunc)(math::matrix<double>, math::matrix<double>) = loss::lossQuad,
-					math::matrix<double> (&lossFunctionDer)(math::matrix<double>, math::matrix<double>) = loss_der::lossQuad);
+					math::matrix<double> (&lossFuncDer)(math::matrix<double>, math::matrix<double>) = loss_der::lossQuad,
+					bool (&optimizerFunc) (vector<layers::layer*>&, vector<math::matrix<double> >&, vector<math::matrix<double> >&, double, double) = optimizers::gradient_descent,
+					int max_iter = 1000,
+					double threshold = 0.000001,
+					double lRate = 0.1);
 
 			void addLayer(layers::layer &layerObj);
 	};
 }
 
+////////////////////////////////////////////////////////////////////////////////////////
+
 mustak::network::network(double (&activationDer)(double),
 						 double (&lossFunc)(math::matrix<double>, math::matrix<double>),
-						 math::matrix<double> (&lossFuncDer)(math::matrix<double>, math::matrix<double>)){
+						 math::matrix<double> (&lossFuncDer)(math::matrix<double>, math::matrix<double>),
+						 bool (&optimizerFunc) (vector<layers::layer*>&, vector<math::matrix<double> >&, vector<math::matrix<double> >&, double, double),
+						 int max_iter,
+						 double thresh,
+						 double lRate){
 	inputLayer = NULL;
 	outputLayer = NULL;
 	activationDerivative = &activationDer;
 	lossFunction = &lossFunc;
 	lossFunctionDer = &lossFuncDer;
+	optimizer = &optimizerFunc;
+	max_iterations = max_iter;
+	threshold = thresh;
+	learning_rate = lRate;
 }
 
 void mustak::network::addLayer(layers::layer &layerObj){
@@ -147,73 +166,9 @@ void mustak::network::backPropagate(math::matrix<double> expectedOutput){
 		activationDer.reset();
 		activationDer.mat_init(networkLayer[layerIterator]->noOfNeurons, 1);
 		for(int i=0; i<networkLayer[layerIterator]->noOfNeurons; i++){
-			cout<<"in actDer"<<endl;
+			cout<<"in actDer"<<endl; //test
 			activationDer.set(activationDerivative(networkLayer[layerIterator]->layerVector.get(0, i)), 0, i);
 		}
-
-		/*
-		// test segment
-		cout<<endl<<"weightMat"<<endl;
-		for(int i = 0; i<layerWeight[layerIterator].rowno; i++){
-			for(int j = 0; j<layerWeight[layerIterator].colno; j++){
-				cout<<layerWeight[layerIterator].get(i, j);
-			}
-			cout<<endl;
-		}
-		cout<<endl<<"errors.back()"<<endl;
-		math::matrix<double> test = errors.back();
-		for(int i = 0; i<test.rowno; i++){
-			for(int j = 0; j<test.colno; j++){
-				cout<<test.get(i, j);
-			}
-			cout<<endl;
-		}
-		
-		cout<<endl<<"multiplication pro 1"<<endl;
-		cout<<layerWeight[layerIterator].colno<<"\t"<<layerWeight[layerIterator].rowno-1<<endl; 
-		math::matrix<double> multiPro1 = math::cropMatrix(
-								layerWeight[layerIterator],
-								0, layerWeight[layerIterator].colno, 0, layerWeight[layerIterator].rowno-1);
-		for(int i = 0; i<multiPro1.rowno; i++){
-			for(int j = 0; j<multiPro1.colno; j++){
-				cout<<multiPro1.get(i, j);
-			}
-			cout<<endl;
-		}
-		
-		cout<<endl<<"multiplication pro 2"<<endl;
-		math::matrix<double> multiPro2 = math::transpose(errors.back());
-		for(int i = 0; i<multiPro2.rowno; i++){
-			for(int j = 0; j<multiPro2.colno; j++){
-				cout<<multiPro2.get(i, j);
-			}
-			cout<<endl;
-		}
-		
-		cout<<endl<<"hadamard pro 1"<<endl;
-		math::matrix<double> hadaPro1 = math::matrixMulti(
-							math::cropMatrix(
-								layerWeight[layerIterator],
-								0, layerWeight[layerIterator].colno, 0, layerWeight[layerIterator].rowno-1),
-							math::transpose(errors.back()));
-		for(int i = 0; i<hadaPro1.rowno; i++){
-			for(int j = 0; j<hadaPro1.colno; j++){
-				cout<<hadaPro1.get(i, j);
-			}
-			cout<<endl;
-		}
-		
-		cout<<endl<<"hadamard Pro 2"<<endl;
-		math::matrix<double> h2 = math::transpose(activationDer);
-		for(int i = 0; i<h2.rowno; i++){
-			for(int j = 0; j<h2.colno; j++){
-				cout<<h2.get(i, j);
-			}
-			cout<<endl;
-		}
-		// end segment
-		*/
-		
 		
 		layerError = math::hadamard(
 						math::matrixMulti(
@@ -223,32 +178,18 @@ void mustak::network::backPropagate(math::matrix<double> expectedOutput){
 							math::transpose(errors.back())),
 						math::transpose(activationDer));
 		cout<<"completed layer error task"<<endl;
+		layerError.is_init = true;
 		errors.push_back(math::transpose(layerError));
 	}
+	
 	cout<<"bye backprop"<<endl; // test segment
-	
-	
-	// rate of change of cost wrt weights
-	vector<math::matrix<double>> weight_gradient_vector;
-	layerIterator = networkLayer.size();
-	
-	cout<<"before while"<<endl;
-
-	while(--layerIterator){
-		// math::matrix<double> weightGrad;
-		//test segment
-		cout<<"inside while of weight"<<endl;
-		networkLayer[layerIterator-1]->layerOutVector.print();
-		cout<<endl<<"multi matrix 2"<<endl;
-		cout<<layerIterator<<endl;
-		//end segment
-
-		weight_gradient_vector.push_back(
-								math::matrixMulti(
-									math::transpose(
-										networkLayer[layerIterator-1]->layerOutVector),
-										errors[layerIterator]));
+	//test
+	for(int i = 0; i<errors.size(); i++){
+		errors[i].print();
 	}
+	//end
+
+	bool end = optimizer(networkLayer, errors, layerWeight, threshold, learning_rate);
 }
 
 #endif
