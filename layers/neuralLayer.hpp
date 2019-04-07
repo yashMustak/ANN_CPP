@@ -58,8 +58,7 @@ namespace mustak{
 	}
 }
 
-mustak::layers::layer::layer(int neurons, double (&init_activation)(double)){
-	noOfNeurons = neurons;
+mustak::layers::layer::layer(int neurons, double (&init_activation)(double)) : noOfNeurons(neurons){
 	activation = &init_activation;
 	layerVector.mat_init(noOfNeurons, 1);
 	layerOutVector.mat_init(noOfNeurons, 1);
