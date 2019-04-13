@@ -53,7 +53,7 @@ namespace mustak{
 				*/
 				void setLayerInput(math::matrix<double> &inputVector);
 				
-				math::matrix<double> getLayerOutput();
+				math::matrix<double> getLayerOutput() const;
 		};
 	}
 }
